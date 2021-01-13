@@ -2,13 +2,20 @@
 from setuptools import setup
 
 APP = ['App.py']
-DATA_FILES = []
+DATA_FILES = [
+    'start.js',
+    'config.txt',
+    'downloaded.txt',
+    'not-downloaded.txt',
+    'icon.png',
+    'temp'
+]
 OPTIONS = {
     'argv_emulation': True,
     'plist': {
         'LSUIElement': True,
     },
-    'packages': ['rumps', 'spotipy'],
+    'packages': ['rumps', 'spotipy', 'requests', 'dotenv'],
 }
 
 setup(
