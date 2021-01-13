@@ -37,6 +37,7 @@ SERVER_URI = os.getenv("SERVER_URI")
 CONDIDENCE_PERCENTAGE = 45
 
 print("STARTING UP")
+rumps.debug_mode(True)
 
 class Playlist:
     def __init__(self, name, uri, tracks):
@@ -72,7 +73,7 @@ class SpotifyApp(rumps.App):
     def __init__(self):
         super(SpotifyApp, self).__init__(type(self).__name__, icon="icon.png", quit_button=None)
         rumps.debug_mode(True)
-        self.menu = ['Start server', 'Make playlists', 'Download missing files', None, 'About', 'Setup', None, 'Clean Quit']
+        self.menu = ['Offline', 'Start server', 'Make playlists', 'Download missing files', None, 'About', 'Setup', None, 'Clean Quit']
         self.username = configjson["username"]
         self.password = configjson["password"]
         self.userid = configjson["userid"]
@@ -82,13 +83,6 @@ class SpotifyApp(rumps.App):
         self.notdownloaded = []
         self.server = None
         self.online = False
-
-    @rumps.timer(5)
-    def loop(self, sender):
-        print(self)
-        print(sender)
-        print(self.online)
-        print(self.menu)
     
     @rumps.clicked('Start server')
     def startServer(self, sender):
@@ -128,8 +122,6 @@ class SpotifyApp(rumps.App):
         api = ApiService()
         random.shuffle(notDownloadedFiles)
 
-        print(notDownloadedFiles)
-
         def format(track):
             if isinstance(track, list):
                 return
@@ -142,7 +134,6 @@ class SpotifyApp(rumps.App):
             res = api.downloadFile(self.location, SERVER_URI + '/download', self.username, self.password, filesToSend)
             bigPrint('RESULTS FROM SERVER')
             bigPrint(res.status_code)
-            responsetext = json.loads(res.text)
             bigPrint(res.text)
 
             if responsetext["error"]:
