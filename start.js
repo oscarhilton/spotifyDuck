@@ -24,7 +24,6 @@ function compare( a, b ) {
 
 async function slskConnection(username, password, location, list) {
   return await slsk.connect({
-    timeout: 2000,
     user: username,
     pass: password,
   }, (err, client) => {
@@ -63,8 +62,9 @@ fs.readFile(CONFIG_TXT, 'utf8' , (err, data) => {
   
     let downloadList = [];
     for (const file of filesToDownload) {
-      const { Album, Track, Artist } = file;
-      const searchForThis = (Album === Track) ? Track + ' ' + Artist : Album + ' ' + Track;
+      const { Album, Track, Artists } = file;
+      console.log(file);
+      const searchForThis = (Album === Track) ? Track + ' ' + Artists : Album ? Album + ' ' + Track : Track;
       downloadList.push(searchForThis);
     }
     console.log(downloadList);
@@ -73,23 +73,23 @@ fs.readFile(CONFIG_TXT, 'utf8' , (err, data) => {
   return;
 });
 
-console.log("HERE");
+// console.log("HERE");
 
 
-const h = new Hub(9000);
+// const h = new Hub(9000);
 
-console.log("START")
+// console.log("START")
 
-h.on("Transport", (data) => {
-  console.log("Hub connected!");
-});
+// h.on("Transport", (data) => {
+//   console.log("Hub connected!");
+// });
 
-h.on("hello", (data) => {
-  console.log(data);
-  h.close();
-});
+// h.on("hello", (data) => {
+//   console.log(data);
+//   h.close();
+// });
 
-// console.log("STARTING SERVER CODE");
+// // console.log("STARTING SERVER CODE");
 
 // function download(client, file, output) {
 //   console.log("HIT HERE")
