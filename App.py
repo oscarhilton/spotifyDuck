@@ -15,7 +15,7 @@ CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 SERVER_URI = os.getenv("SERVER_URI")
 
-CONDIDENCE_PERCENTAGE = 40
+CONDIDENCE_PERCENTAGE = 65
 
 print("STARTING UP")
 rumps.debug_mode(True)
@@ -81,9 +81,7 @@ class SpotifyApp(rumps.App):
 
     def find(self, trackname, trackartists, album, path):
         result = []
-
         extensions = ['*.flac', '*.mp3']
-
         files = []
 
         for ext in extensions:
@@ -96,33 +94,29 @@ class SpotifyApp(rumps.App):
             nestedglob = glob(findthis)
             files.extend(nestedglob)
 
-
         for fp in files:
-            print(fp)
+            meta = tinytag.TinyTag.get(fp)
+            if (meta):
+                similarName = self.similar(str(meta.title), trackname) * 100
+                similarAlbum = self.similar(str(meta.album), album) * 100
+                similarArtists = self.similar(str(meta.artist), trackartists) * 100
+                total = (similarName + similarAlbum + similarArtists) / 3
+                result.append({ 'track': trackname + ' - ' + trackartists + ' - ' + album, 'path': fp, 'total': total })
 
-        #     total = 0
+        try:
+            sort = sorted(result, key=lambda k: k['total'], reverse=True)
+            best = None
 
-        #     try:
-        #         meta = tinytag.TinyTag.get(fp)
-        #         similarName = self.similar(meta['title'], trackname)
-        #         print(similarName)
-        #     except Exception as exc:
-        #         print(exc)
+            if (len(sort) > 0):
+                best = sort[0]
 
-            # result.append({ 'track': trackname + ' - ' + trackartists + ' - ' + album, 'path': name, 'total': total })
+                if (best and best['total'] > CONDIDENCE_PERCENTAGE):
+                    print(best)
+                    return { 'path': best['path'], 'ratio': best['total'] }
 
-        # sort = sorted(result, key=lambda k: k['total'], reverse=True)
-
-        # best = None
-
-        # if (len(sort) > 0):
-        #     best = sort[0]
-
-        #     if (best and best['total'] > CONDIDENCE_PERCENTAGE):
-        #         print(best)
-        #         return { 'path': best['path'], 'ratio': best['total'] }
-
-        # return False
+            return False
+        except Exception as exc:
+            print(exc)
 
     @rumps.clicked('Setup')
     def runSetup(self, _):
@@ -194,57 +188,64 @@ class SpotifyApp(rumps.App):
                         'Most Likely': res['path'] if res else None,
                         "Confidence": res['ratio'] if res else None,
                     }
-                    tracksData.append(data)
+                    self.tracksData.append(data)
 
                     if res:
                         self.downloaded.append(data)
                     else:
                         self.notdownloaded.append(data)
 
-            print(len(tracksData))
+            print(len(self.tracksData))
             print(len(self.downloaded), len(self.notdownloaded))
         
-            print("STARTING UPDATE OF TXT FILES")
-            config.updateDownloaded(self.downloaded)
-            config.updateNotDownloaded(self.notdownloaded)
+            try:
+                print("STARTING UPDATE OF TXT FILES")
+                config.updateDownloaded(self.downloaded)
+                config.updateNotDownloaded(self.notdownloaded)
+            except Exception as exc:
+                print(exc)
 
-            print("STARTING UPDATE OF ANALYSIS CSV")
-            analysisPath = self.endpath + '/analysis/'
-            exists = os.path.exists(analysisPath)
-            if not exists:
-                try:
-                    
-                    os.makedirs(analysisPath)
-                except OSError as exc: # Guard against race condition
-                    if exc.errno != errno.EEXIST:
-                        raise
-
-            with open(analysisPath + 'playlists.csv', mode='w') as csv_file:
-                fieldnames = ['Playlist', 'Track', 'Album', 'Artists', 'Duration', 'Most Likely', 'Confidence']
-                writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-                writer.writeheader()
-
-                for track in tracksData:
-                    writer.writerow(track)
-
-                playlistpath = os.path.expanduser(self.endpath + '/playlists/')
-                exists = os.path.exists(playlistpath)
+            try:
+                print("STARTING UPDATE OF ANALYSIS CSV")
+                analysisPath = self.endpath + '/analysis/'
+                exists = os.path.exists(analysisPath)
                 if not exists:
                     try:
-                        os.makedirs(playlistpath)
+                        
+                        os.makedirs(analysisPath)
                     except OSError as exc: # Guard against race condition
                         if exc.errno != errno.EEXIST:
                             raise
 
-                f = open(playlistpath + playlist.name + '.m3u', "w+")
-                f.write('#EXTM3U\n')
+                with open(analysisPath + 'playlists.csv', mode='w') as csv_file:
+                    fieldnames = ['Playlist', 'Track', 'Album', 'Artists', 'Duration', 'Most Likely', 'Confidence']
+                    writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+                    writer.writeheader()
 
-                for track in tracksData:
-                    path = track["Most Likely"]
-                    if (path):
-                        f.write("#EXTINF:" + str(track["Duration"]) + "," + track["Artists"] + " - " + track["Track"] + "\n")
-                        f.write(path + "\n")
-                        f.write("\n")
+                    for track in self.tracksData:
+                        writer.writerow(track)
+
+                    playlistpath = os.path.expanduser(self.endpath + '/playlists/')
+                    exists = os.path.exists(playlistpath)
+                    if not exists:
+                        try:
+                            os.makedirs(playlistpath)
+                        except OSError as exc: # Guard against race condition
+                            if exc.errno != errno.EEXIST:
+                                raise
+
+                    for playlist in self.pls:
+                        f = open(playlistpath + playlist.name + '.m3u', "w+")
+                        f.write('#EXTM3U\n')
+
+                        for track in self.tracksData:
+                            path = track["Most Likely"]
+                            if (path):
+                                f.write("#EXTINF:" + str(track["Duration"]) + "," + track["Artists"] + " - " + track["Track"] + "\n")
+                                f.write(path + "\n")
+                                f.write("\n")
+            except Exception as exc:
+                print(exc)
 
             bigPrint("FINISHING UP")
             print(len(self.downloaded), len(self.notdownloaded))
