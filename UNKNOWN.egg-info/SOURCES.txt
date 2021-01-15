@@ -1,4 +1,10 @@
+README.md
+config.txt
+downloaded.txt
+icon.png
+not_download.txt
 setup.py
+start.js
 UNKNOWN.egg-info/PKG-INFO
 UNKNOWN.egg-info/SOURCES.txt
 UNKNOWN.egg-info/dependency_links.txt

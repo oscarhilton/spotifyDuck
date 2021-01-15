@@ -1,48 +1,9 @@
-const slsk = require('slsk-client');
 const Hub = require("socket.engine").Hub;
 const fs = require('fs');
+const SoulseekCli = require('./commands/soulseek-cli');
 
 const CONFIG_TXT = 'config.txt';
 const NOT_DOWNLOAD_FILES_TXT = 'not_download.txt';
-
-function compare( a, b ) {
-  let count = 0
-  if ( a.speed < b.speed ){
-    count--;
-  }
-  if ( a.speed > b.speed ){
-    count++;
-  }
-  if ( a.bitrate < b.bitrate ) {
-    count--
-  }
-  if ( a.bitrate > b.bitrate ) {
-    count++;
-  }
-  return count;
-}
-
-async function slskConnection(username, password, location, list) {
-  return await slsk.connect({
-    user: username,
-    pass: password,
-  }, (err, client) => {
-    if (err) return console.log("SOULSEEK GET CLIENT: ", err);
-
-    for (item of list) {
-      client.search({
-        req: item,
-        timeout: 5000 // you can increase if you want a deeper search
-      }, (err, res) => {
-          if (err) return console.log(err)
-      })
-    }
-    // use event function
-    client.on('found', function(result) {
-      console.log(result);
-    });
-  });
-}
 
 fs.readFile(CONFIG_TXT, 'utf8' , (err, data) => {
   if (err) {
@@ -63,17 +24,16 @@ fs.readFile(CONFIG_TXT, 'utf8' , (err, data) => {
     let downloadList = [];
     for (const file of filesToDownload) {
       const { Album, Track, Artists } = file;
-      console.log(file);
-      const searchForThis = (Album === Track) ? Track + ' ' + Artists : Album ? Album + ' ' + Track : Track;
+      const searchForThis = (Album === Track) ? Track + ' ' + Artists  : Album ? Album + ' ' + Track + ' ' + Artists : Track;
       downloadList.push(searchForThis);
     }
-    console.log(downloadList);
-    return slskConnection(username, password, location, downloadList);
+
+    return new SoulseekCli(username, password, downloadList, location);
   });
   return;
 });
 
-// console.log("HERE");
+console.log("HERE");
 
 
 // const h = new Hub(9000);

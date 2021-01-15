@@ -75,22 +75,21 @@
 		<false/>
 	</dict>
 	<key>PyResourcePackages</key>
-	<array>
-	</array>
+	<array/>
 	<key>PyRuntimeLocations</key>
 	<array>
-		<string>@executable_path/../Frameworks/Python.framework/Versions/2.7/Python</string>
-		<string>/System/Library/Frameworks/Python.framework/Versions/2.7/Python</string>
+		<string>@executable_path/../Frameworks/Python.framework/Versions/3.9/Python</string>
+		<string>/Library/Frameworks/Python.framework/Versions/3.9/Python</string>
 	</array>
 	<key>PythonInfoDict</key>
 	<dict>
 		<key>PythonExecutable</key>
-		<string>/System/Library/Frameworks/Python.framework/Versions/2.7/Resources/Python.app/Contents/MacOS/Python</string>
+		<string>/Library/Frameworks/Python.framework/Versions/3.9/bin/python3</string>
 		<key>PythonLongVersion</key>
-		<string>2.7.16 (default, Jun  5 2020, 22:59:21) 
-[GCC 4.2.1 Compatible Apple LLVM 11.0.3 (clang-1103.0.29.20) (-macos10.15-objc-</string>
+		<string>3.9.1 (v3.9.1:1e5d33e9b9, Dec  7 2020, 12:10:52) 
+[Clang 6.0 (clang-600.0.57)]</string>
 		<key>PythonShortVersion</key>
-		<string>2.7</string>
+		<string>3.9</string>
 		<key>py2app</key>
 		<dict>
 			<key>alias</key>
