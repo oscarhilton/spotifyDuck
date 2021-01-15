@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-import os, rumps, csv, rumps, spotipy, config, json, requests, random, tinytag
+import os, rumps, csv, rumps, spotipy, config, json, requests, random, tinytag, threading
 from difflib import SequenceMatcher
 from glob import glob
 from spotipy.oauth2 import SpotifyClientCredentials
@@ -67,6 +67,41 @@ class SpotifyApp(rumps.App):
         self.server = None
         self.online = False
 
+    def makeTrackingFiles(self):
+        try:     
+            for playlist in self.pls:
+                for trackObject in playlist.tracks:
+                    trackname = trackObject['track']['name']
+                    album = trackObject['track']['album']['name']
+                    trackartists = self.getAllArtistsFromTrack(trackObject['track']['artists'])
+                    duration = trackObject['track']['duration_ms']
+                    res = self.find(trackname, trackartists, album, '/Volumes/SHARED/music/')
+                    data = {
+                        'Playlist': playlist.name,
+                        'Track': trackname,
+                        'Album': album,
+                        'Artists': trackartists,
+                        'Duration': duration / 100,
+                        'Most Likely': res['path'] if res else None,
+                        "Confidence": res['ratio'] if res else None,
+                    }
+                    self.tracksData.append(data)
+
+                    if res:
+                        self.downloaded.append(data)
+                    else:
+                        self.notdownloaded.append(data)
+
+            print(len(self.tracksData))
+            print(len(self.downloaded), len(self.notdownloaded))
+        
+            try:
+                print("STARTING UPDATE OF TXT FILES")
+                config.updateDownloaded(self.downloaded.encode('utf-8').strip())
+                config.updateNotDownloaded(self.notdownloaded.encode('utf-8').strip())
+            except Exception as exc:
+                print("HERE!", exc)
+
     def similar(self, a, b):
         return SequenceMatcher(None, a, b).ratio()
 
@@ -111,7 +146,7 @@ class SpotifyApp(rumps.App):
                 best = sort[0]
 
                 if (best and best['total'] > CONDIDENCE_PERCENTAGE):
-                    print(best)
+                    [rint(best)]
                     return { 'path': best['path'], 'ratio': best['total'] }
 
             return False
@@ -171,89 +206,57 @@ class SpotifyApp(rumps.App):
         except Exception as exc:
             print(exc)
 
-        try:            
-            for playlist in self.pls:
-                for trackObject in playlist.tracks:
-                    trackname = trackObject['track']['name']
-                    album = trackObject['track']['album']['name']
-                    trackartists = self.getAllArtistsFromTrack(trackObject['track']['artists'])
-                    duration = trackObject['track']['duration_ms']
-                    res = self.find(trackname, trackartists, album, '/Volumes/SHARED/music/')
-                    data = {
-                        'Playlist': playlist.name,
-                        'Track': trackname,
-                        'Album': album,
-                        'Artists': trackartists,
-                        'Duration': duration / 100,
-                        'Most Likely': res['path'] if res else None,
-                        "Confidence": res['ratio'] if res else None,
-                    }
-                    self.tracksData.append(data)
-
-                    if res:
-                        self.downloaded.append(data)
-                    else:
-                        self.notdownloaded.append(data)
-
-            print(len(self.tracksData))
-            print(len(self.downloaded), len(self.notdownloaded))
         
-            try:
-                print("STARTING UPDATE OF TXT FILES")
-                config.updateDownloaded(self.downloaded)
-                config.updateNotDownloaded(self.notdownloaded)
-            except Exception as exc:
-                print(exc)
 
-            try:
-                print("STARTING UPDATE OF ANALYSIS CSV")
-                analysisPath = self.endpath + '/analysis/'
-                exists = os.path.exists(analysisPath)
+        try:
+            print("STARTING UPDATE OF ANALYSIS CSV")
+            analysisPath = self.endpath + '/analysis/'
+            exists = os.path.exists(analysisPath)
+            if not exists:
+                try:
+                    
+                    os.makedirs(analysisPath)
+                except OSError as exc: # Guard against race condition
+                    if exc.errno != errno.EEXIST:
+                        raise
+
+            with open(analysisPath + 'playlists.csv', mode='w') as csv_file:
+                fieldnames = ['Playlist', 'Track', 'Album', 'Artists', 'Duration', 'Most Likely', 'Confidence']
+                writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+                writer.writeheader()
+
+                for track in self.tracksData:
+                    writer.writerow(track)
+
+                playlistpath = os.path.expanduser(self.endpath + '/playlists/')
+                exists = os.path.exists(playlistpath)
                 if not exists:
                     try:
-                        
-                        os.makedirs(analysisPath)
+                        os.makedirs(playlistpath)
                     except OSError as exc: # Guard against race condition
                         if exc.errno != errno.EEXIST:
                             raise
 
-                with open(analysisPath + 'playlists.csv', mode='w') as csv_file:
-                    fieldnames = ['Playlist', 'Track', 'Album', 'Artists', 'Duration', 'Most Likely', 'Confidence']
-                    writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-                    writer.writeheader()
+                for playlist in self.pls:
+                    f = open(playlistpath + playlist.name + '.m3u', "w+")
+                    f.write('#EXTM3U\n')
 
-                    for track in self.tracksData:
-                        writer.writerow(track)
+                    for track in playlist.tracks:
+                        path = track["Most Likely"]
+                        if (path):
+                            f.write("#EXTINF:" + str(track["Duration"]) + "," + track["Artists"] + " - " + track["Track"] + "\n")
+                            f.write(path + "\n")
+                            f.write("\n")
+        except Exception as exc:
+            print(exc)
 
-                    playlistpath = os.path.expanduser(self.endpath + '/playlists/')
-                    exists = os.path.exists(playlistpath)
-                    if not exists:
-                        try:
-                            os.makedirs(playlistpath)
-                        except OSError as exc: # Guard against race condition
-                            if exc.errno != errno.EEXIST:
-                                raise
-
-                    for playlist in self.pls:
-                        f = open(playlistpath + playlist.name + '.m3u', "w+")
-                        f.write('#EXTM3U\n')
-
-                        for track in self.tracksData:
-                            path = track["Most Likely"]
-                            if (path):
-                                f.write("#EXTINF:" + str(track["Duration"]) + "," + track["Artists"] + " - " + track["Track"] + "\n")
-                                f.write(path + "\n")
-                                f.write("\n")
-            except Exception as exc:
-                print(exc)
-
-            bigPrint("FINISHING UP")
-            print(len(self.downloaded), len(self.notdownloaded))
-            downloadedLength = len(self.downloaded)
-            notDownloadedLength = len(self.notdownloaded)
-            percentageDownloaded = downloadedLength / (downloadedLength + notDownloadedLength)
-            print(percentageDownloaded)
-            rumps.notification(title="Analysis finished!", subtitle="Enjoy your playlists!", message="You have " + str(percentageDownloaded) + "%" + " of all playlist files downloaded.", data=None, sound=True)
+        bigPrint("FINISHING UP")
+        print(len(self.downloaded), len(self.notdownloaded))
+        downloadedLength = len(self.downloaded)
+        notDownloadedLength = len(self.notdownloaded)
+        percentageDownloaded = downloadedLength / (downloadedLength + notDownloadedLength)
+        print(percentageDownloaded)
+        rumps.notification(title="Analysis finished!", subtitle="Enjoy your playlists!", message="You have " + str(percentageDownloaded) + "%" + " of all playlist files downloaded.", data=None, sound=True)
 
         except Exception as exc:
             rumps.notification(title="Oops.", subtitle="Looks like your creds are wrong.", message="Quack quack", data=None, sound=True)

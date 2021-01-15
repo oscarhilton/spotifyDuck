@@ -1,6 +1,7 @@
 const Hub = require("socket.engine").Hub;
 const fs = require('fs');
 const SoulseekCli = require('./commands/soulseek-cli');
+var randomWords = require('random-words');
 
 const CONFIG_TXT = 'config.txt';
 const NOT_DOWNLOAD_FILES_TXT = 'not_download.txt';
@@ -28,12 +29,10 @@ fs.readFile(CONFIG_TXT, 'utf8' , (err, data) => {
       downloadList.push(searchForThis);
     }
 
-    return new SoulseekCli(username, password, downloadList, location);
+    return new SoulseekCli(randomWords({ exactly: 3, join: ' ' }), randomWords({ exactly: 3, join: ' ' }), downloadList, location);
   });
   return;
 });
-
-console.log("HERE");
 
 
 // const h = new Hub(9000);
