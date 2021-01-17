@@ -1,138 +1,76 @@
-const Hub = require("socket.engine").Hub;
-const fs = require('fs');
-const SoulseekCli = require('./commands/soulseek-cli');
-var randomWords = require('random-words');
+var Client = require("socket.engine").client;
 
-const CONFIG_TXT = 'config.txt';
-const NOT_DOWNLOAD_FILES_TXT = 'not_download.txt';
+const HOST = "127.0.0.1";
+const PORT = "9999";
 
-fs.readFile(CONFIG_TXT, 'utf8' , (err, data) => {
-  if (err) {
-    console.error(err)
-    return
-  }
+var c = new Client(addr=HOST, port=PORT);
+c.start();
 
-  const { username, password, location } = JSON.parse(data);
-
-  fs.readFile(NOT_DOWNLOAD_FILES_TXT, 'utf8' , async (err, data) => {
-    if (err) {
-      console.error(err)
-      return
-    }
-  
-    const filesToDownload = JSON.parse(data);
-  
-    let downloadList = [];
-    for (const file of filesToDownload) {
-      const { Album, Track, Artists } = file;
-      const searchForThis = (Album === Track) ? Track + ' ' + Artists  : Album ? Album + ' ' + Track + ' ' + Artists : Track;
-      downloadList.push(searchForThis);
-    }
-
-    return new SoulseekCli(randomWords({ exactly: 3, join: ' ' }), randomWords({ exactly: 3, join: ' ' }), downloadList, location);
-  });
-  return;
+c.on("Test", (data) => {
+  console.log(data);
 });
 
+c.write("Test", "Hello there!");
+c.get("Test");
 
-// const h = new Hub(9000);
 
-// console.log("START")
+// const Hub = require("socket.engine").Hub;
+// const fs = require('fs');
+// const SoulseekCli = require('./commands/soulseek-cli');
+// var randomWords = require('random-words');
 
-// h.on("Transport", (data) => {
-//   console.log("Hub connected!");
-// });
+// console.log("STARTING HUB")
 
-// h.on("hello", (data) => {
+// const COMMANDS = {
+//   PING: 'PING',
+//   DOWNLOAD_MISSING: "DOWNLOAD_MISSNIG",
+// };
+
+// const h = new Hub(9999);
+
+// h.connect("hello!", "127.0.0.1", 8080);
+
+
+// h.on(COMMANDS.PING, (data) => {
 //   console.log(data);
+// })
+
+// h.on(COMMANDS.DOWNLOAD_MISSING, (data) => {
+//   console.log(data);
+//   const CONFIG_TXT = 'config.txt';
+//   const NOT_DOWNLOAD_FILES_TXT = 'not_download.txt';
+
+//   fs.readFile(CONFIG_TXT, 'utf8' , (err, data) => {
+//     if (err) {
+//       console.error(err)
+//       return
+//     }
+
+//     const { username, password, location } = JSON.parse(data);
+
+//     fs.readFile(NOT_DOWNLOAD_FILES_TXT, 'utf8' , async (err, data) => {
+//       if (err) {
+//         console.error(err)
+//         return
+//       }
+    
+//       const filesToDownload = JSON.parse(data);
+    
+//       let downloadList = [];
+//       for (const file of filesToDownload) {
+//         const { Album, Track, Artists } = file;
+//         const searchForThis = (Album === Track) ? Track + ' ' + Artists  : Album ? Album + ' ' + Track + ' ' + Artists : Track;
+//         downloadList.push(searchForThis);
+//       }
+
+//       return new SoulseekCli(randomWords({ exactly: 3, join: ' ' }), randomWords({ exactly: 3, join: ' ' }), downloadList, location);
+//     });
+//     return;
+//   });
+
 //   h.close();
 // });
 
-// // console.log("STARTING SERVER CODE");
+// console.log(h)
 
-// function download(client, file, output) {
-//   console.log("HIT HERE")
-//   try {
-//     client.download({
-//       file,
-//       path: output,
-//     }, (err, data) => {
-//       if (err) {
-//         console.log(err);
-//         return;
-//       }
-//       console.log("FINISHED DOWNLOADING!");
-//       return;
-//     });
-//   } catch (e) {
-//     console.log("ERROR: ", e);
-//     return;
-//   }
-// }
-
-// app.use(bodyParser.json())
-// app.post('/download',function(req,res){
-//   console.log("USER REQUESTED DOWNLOAD");
-
-//   if (!req.body) {
-//     return res.status(403).json({ status: '403', error: "Bad request" });
-//   }
-
-//   const outputPath = req.body.outputPath;
-//   const user = req.body.user;
-//   const pass = req.body.pass;
-//   const files = req.body.files;
-
-//   console.log(req.body);
-
-//   if (!user || !pass || !files || !outputPath) {
-//     return res.status(403).json({ status: '403', error: "Bad request" });
-//   }
-
-//   try {
-//     slsk.connect({
-//       timeout: 10000,
-//       user,
-//       pass,
-//     }, (err, client) => {
-//       if (err) {
-//         console.log(client, "SOULSEEK GET CLIENT: ", err);
-//         return res.send({ error: err.message, line: err.lineNumber, name: err.name });
-//       }
-
-//       for (const file in files) {
-//         console.log(file)
-//         // try {
-//         //   client.search({
-//         //     req: files[file],
-//         //     timeout: 30000
-//         //   }, (err, files) => {
-//         //     if (err) {
-//         //       console.log("SOULSEEK SEARCH SAYS: ", err);
-//         //       return res.end();
-//         //     }
-//         //     console.log("HERE!!");
-//         //     if (file) {
-//         //       console.log(files[file])
-//         //       const output = outputPath + "/temp/" + files[file].replace(/\\/g, "/");
-//         //       files.sort(compare);
-//         //       console.log("compare done!");
-//         //       download(client, files[0], output);
-//         //     } else {
-//         //       console.log("No files found for ", file);
-//         //       return res.end();
-//         //     }
-//         //   })
-//         // } catch (e) {
-//         //   console.log("SOULSEEK CLIENT SAYS: ", e)
-//         //   return res.end();
-//         // }
-//       }
-
-//       return res.end();
-//     })
-//   } catch (e) {
-//     console.log("SOULSEEK CONNECTION ERROR: ", e)
-//     return res.end();
-//   }
-// });
+// h.write_to_local(COMMANDS.PING, "HELLO")

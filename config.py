@@ -9,7 +9,6 @@ def updateFile(filename, data):
   with open(filename, 'w') as outfile:
     json.dump(data, outfile)
 
-
 def readConfig():
   return readFile('config.txt')
 
